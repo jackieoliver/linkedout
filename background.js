@@ -1,6 +1,3 @@
-// Clicking the toolbar icon opens the settings page.
-chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
-
 // Self-update (same approach as French Weave): an updater job replaces this folder on disk, but Chrome keeps
 // running the loaded copy. Compare the manifest on disk with the running one and reload from disk, once per disk
 // version. If the running copy still differs after that, put "NEW" on the toolbar icon so the user reloads by hand.

@@ -5,7 +5,7 @@ Chrome extension that hides LinkedIn sponsored messages and low-value notificati
 - **Messages**: hides conversations tagged "Sponsored" (optionally all InMail).
 - **Notifications**: by default shows only notifications matching a keep phrase (comments on your posts, mentions, replies, accepted invitations...). A second mode shows everything except hide phrases. Sponsored or promoted notifications are always hidden.
 - Nothing is clicked, deleted or marked read: hidden items get a CSS class, and the "LinkedOut hid N · show" pill at the bottom left reveals them.
-- Rules are editable on the settings page (click the toolbar icon). Settings sync through Chrome.
+- The toolbar icon opens quick settings; the full settings page (phrase lists) is linked from there. Settings sync through Chrome.
 
 Built in October 2026 because nothing existing covered both: LinkedZen (closest) has fixed toggles and lists configurable notification blocking as roadmap only; LinkedBlock covers sponsored InMail but not notifications. LinkedIn also removed its own "Sponsored Messages" setting.
 

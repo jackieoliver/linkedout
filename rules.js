@@ -70,9 +70,19 @@ const LINKEDOUT_DEFAULTS = {
     "you've got an invite",
   ].join("\n"),
 
+  // Phrases the user added on the settings page (shown there even when unchecked).
+  keepExtra: "",
+  hideExtra: "",
+
   hideSponsoredMessages: true,
   hideInMail: false,
   showHiddenPill: true,
+
+  // The red counts on the top nav. Most notifications are noise, so its count is hidden; message counts stay.
+  hideNotificationBadge: true,
+  // Instead, show how many of the new notifications pass the rules (reads the Notifications page in the background).
+  smartNotificationBadge: true,
+  hideMessagingBadge: false,
 };
 
 function linkedoutPatterns(text) {

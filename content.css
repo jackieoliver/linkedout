@@ -1,4 +1,5 @@
-.linkedout-hidden {
+.linkedout-hidden,
+.linkedout-badge-hidden {
   display: none !important;
 }
 

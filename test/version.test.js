@@ -5,7 +5,7 @@ const { execFileSync } = require("node:child_process");
 const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
-const EXTENSION_FILES = ["manifest.json", "background.js", "content.js", "content.css", "rules.js", "options.html", "options.js", "icons/*.png"];
+const EXTENSION_FILES = ["manifest.json", "background.js", "content.js", "content.css", "rules.js", "options.html", "options.js", "popup.html", "popup.js", "icons/*.png"];
 
 function git(...args) {
   return execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });

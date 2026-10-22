@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root { --blue: #0a66c2; --line: #e0dfdc; --muted: #666; }
+    body { font: 13.5px/1.4 -apple-system, system-ui, sans-serif; color: #1d1d1d; margin: 0; width: 300px; }
+    header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+    header img { width: 28px; height: 28px; }
+    h1 { font-size: 16px; margin: 0; flex: 1; }
+    #version { color: var(--muted); font-size: 12px; font-weight: normal; }
+    section { padding: 8px 14px; border-bottom: 1px solid var(--line); }
+    h2 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 2px 0 4px; }
+    label { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; }
+    input { accent-color: var(--blue); width: 15px; height: 15px; margin: 0; flex: none; }
+    footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; }
+    a { color: var(--blue); font-weight: 600; text-decoration: none; cursor: pointer; }
+    a:hover { text-decoration: underline; }
+    #status { color: #2a7a2a; font-size: 12px; }
+    .off section { opacity: 0.45; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon128.png" alt="">
+    <h1>LinkedOut <span id="version"></span></h1>
+    <label title="Turn LinkedOut on or off"><input type="checkbox" id="enabled"> On</label>
+  </header>
+  <section>
+    <h2>Notifications</h2>
+    <label><input type="radio" name="notificationMode" value="keep"> Show only ones that involve me</label>
+    <label><input type="radio" name="notificationMode" value="hide"> Show all except the Hide list</label>
+    <label><input type="checkbox" id="smartNotificationBadge"> Red number counts only those</label>
+  </section>
+  <section>
+    <h2>Messages</h2>
+    <label><input type="checkbox" id="hideSponsoredMessages"> Hide sponsored messages</label>
+    <label><input type="checkbox" id="hideInMail"> Hide all InMail</label>
+    <label><input type="checkbox" id="hideMessagingBadge"> Hide the red number on Messaging</label>
+  </section>
+  <footer>
+    <a id="all">All settings and phrases →</a>
+    <span id="status"></span>
+  </footer>
+  <script src="rules.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

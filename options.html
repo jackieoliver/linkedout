@@ -4,47 +4,84 @@
   <meta charset="utf-8">
   <title>LinkedOut settings</title>
   <style>
-    body { font: 14px/1.5 -apple-system, system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 16px; color: #222; }
-    h1 { font-size: 22px; margin-bottom: 4px; }
-    fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 16px 0; padding: 12px 16px; }
-    legend { font-weight: 600; padding: 0 6px; }
-    textarea { width: 100%; height: 220px; font: 13px/1.4 ui-monospace, monospace; box-sizing: border-box; }
-    .hint { color: #666; font-size: 12px; }
-    label { display: block; margin: 4px 0; }
-    #status { margin-left: 12px; color: #2a7a2a; }
+    :root { --blue: #0a66c2; --line: #e0dfdc; --muted: #666; }
+    body { font: 14px/1.5 -apple-system, system-ui, sans-serif; background: #f4f2ee; color: #1d1d1d; margin: 0; }
+    main { max-width: 760px; margin: 32px auto; padding: 0 16px 48px; }
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    header img { width: 40px; height: 40px; }
+    h1 { font-size: 24px; margin: 0; }
+    #version { color: var(--muted); font-size: 13px; font-weight: normal; }
+    .hint { color: var(--muted); font-size: 12.5px; margin: 4px 0 8px; }
+    section { background: #fff; border: 1px solid var(--line); border-radius: 10px; margin: 16px 0; padding: 14px 18px; }
+    h2 { font-size: 16px; margin: 0 0 8px; }
+    h3 { font-size: 14px; margin: 16px 0 4px; }
+    label { display: flex; align-items: center; gap: 8px; margin: 4px 0; cursor: pointer; }
+    input[type=checkbox], input[type=radio] { accent-color: var(--blue); width: 16px; height: 16px; margin: 0; }
+    .phrases { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 16px; }
+    .phrases label { font-size: 13.5px; }
+    .phrases .custom { font-style: italic; }
+    .remove { border: none; background: none; color: #999; cursor: pointer; font-size: 15px; padding: 0 4px; }
+    .remove:hover { color: #b00; }
+    .add { display: flex; gap: 8px; margin-top: 8px; }
+    .add input { flex: 1; padding: 6px 10px; border: 1px solid #bbb; border-radius: 6px; font: inherit; }
+    button { font: inherit; border-radius: 999px; padding: 5px 14px; cursor: pointer; border: 1px solid var(--blue); background: #fff; color: var(--blue); font-weight: 600; }
+    button.primary { background: var(--blue); color: #fff; }
+    .dim { opacity: 0.45; }
+    footer { display: flex; align-items: center; gap: 12px; }
+    #status { color: #2a7a2a; }
   </style>
 </head>
 <body>
-  <h1>LinkedOut <span id="version" class="hint"></span></h1>
-  <p class="hint">Hidden items stay on the page; the "LinkedOut hid N" pill at the bottom left shows them again.</p>
+<main>
+  <header>
+    <img src="icons/icon128.png" alt="">
+    <h1>LinkedOut <span id="version"></span></h1>
+  </header>
+  <p class="hint">Changes save as you make them. Hidden items stay on the page; the "LinkedOut hid N" pill at the bottom left shows them again.</p>
 
-  <fieldset>
-    <legend>General</legend>
+  <section>
+    <h2>General</h2>
     <label><input type="checkbox" id="enabled"> Enabled</label>
     <label><input type="checkbox" id="showHiddenPill"> Show the "hid N" pill</label>
-  </fieldset>
+  </section>
 
-  <fieldset>
-    <legend>Messages</legend>
+  <section>
+    <h2>Red counts on the top bar</h2>
+    <label><input type="checkbox" id="smartNotificationBadge"> Notifications: count only the new ones that pass your rules below</label>
+    <label><input type="checkbox" id="hideNotificationBadge"> Hide the red number on Notifications (when it can't be counted)</label>
+    <label><input type="checkbox" id="hideMessagingBadge"> Hide the red number on Messaging</label>
+    <p class="hint">The count reads your Notifications page in the background, the same page you'd open. If LinkedIn changes and it can't, the "hide" option decides. Hiding the Messaging number hides it for all messages, real ones included.</p>
+  </section>
+
+  <section>
+    <h2>Messages</h2>
     <label><input type="checkbox" id="hideSponsoredMessages"> Hide sponsored messages</label>
     <label><input type="checkbox" id="hideInMail"> Hide all InMail (including recruiters)</label>
-  </fieldset>
+  </section>
 
-  <fieldset>
-    <legend>Notifications</legend>
-    <label><input type="radio" name="notificationMode" value="keep"> Show only notifications matching a keep phrase</label>
-    <label><input type="radio" name="notificationMode" value="hide"> Show everything except notifications matching a hide phrase</label>
-    <p class="hint">One phrase per line, case-insensitive, matched anywhere in the notification text. Keep wins over hide. Sponsored or promoted notifications are always hidden.</p>
-    <h3>Keep</h3>
-    <textarea id="keepPatterns"></textarea>
-    <h3>Hide (used in the second mode)</h3>
-    <textarea id="hidePatterns"></textarea>
-  </fieldset>
+  <section>
+    <h2>Notifications</h2>
+    <label><input type="radio" name="notificationMode" value="keep"> Show only notifications that involve me (the "Show" list)</label>
+    <label><input type="radio" name="notificationMode" value="hide"> Show everything except the "Hide" list</label>
+    <p class="hint">Phrases match anywhere in a notification, ignoring case. "Show" wins over "Hide". Sponsored or promoted notifications are always hidden.</p>
 
-  <button id="save">Save</button>
-  <button id="reset">Reset to defaults</button>
-  <span id="status"></span>
+    <h3>Show notifications that mention…</h3>
+    <div class="phrases" id="keepList"></div>
+    <form class="add" data-list="keep"><input placeholder="Add a phrase, e.g. congratulated you"><button>Add</button></form>
 
+    <div id="hideBlock">
+      <h3>Hide notifications that mention…</h3>
+      <p class="hint" id="hideNote">Used when "Show everything except the Hide list" is on.</p>
+      <div class="phrases" id="hideList"></div>
+      <form class="add" data-list="hide"><input placeholder="Add a phrase, e.g. is hiring"><button>Add</button></form>
+    </div>
+  </section>
+
+  <footer>
+    <button id="reset">Reset to defaults</button>
+    <span id="status"></span>
+  </footer>
+</main>
   <script src="rules.js"></script>
   <script src="options.js"></script>
 </body>

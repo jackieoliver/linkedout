@@ -52,6 +52,12 @@ ALL_NOISE = """<!doctype html><html><body><main><div data-testid="lazy-column">
 <div>12 people viewed your profile</div><div>You appeared in 40 searches this week</div>
 </div></main></body></html>"""
 
+# Top nav as LinkedIn ships it in 2026-10 (hashed classes; the count is a number-only span next to the icon).
+FEED = """<!doctype html><html><head><title>(3) Feed | LinkedIn</title></head><body><header><nav><ul>
+<li><a href="/messaging/" aria-label="Messaging, 1 new notification"><span><svg></svg><span class="kxhlu9">1</span></span><span><span>Messaging</span></span></a></li>
+<li><a href="/notifications/" aria-label="Notifications, 2 new notifications"><span><svg></svg><span class="kxhlu9">2</span></span><span><span>Notifications</span></span></a></li>
+</ul></nav></header><main>feed</main></body></html>"""
+
 failures = []
 
 
@@ -73,7 +79,7 @@ def state(page):
 
 def route(r):
     url = r.request.url
-    body = MESSAGING if "/messaging" in url else ALL_NOISE if "allnoise" in url else NOTIFICATIONS
+    body = FEED if "/feed" in url else MESSAGING if "/messaging" in url else ALL_NOISE if "allnoise" in url else NOTIFICATIONS
     r.fulfill(status=200, content_type="text/html; charset=utf-8", body=body)
 
 
@@ -90,6 +96,17 @@ with sync_playwright() as p, tempfile.TemporaryDirectory() as profile:
 
     page = ctx.new_page()
     print("browser", ctx.browser.version if ctx.browser else page.evaluate("() => navigator.userAgent"))
+
+    badges = """() => Object.fromEntries([...document.querySelectorAll('nav a')].map(a =>
+        [a.getAttribute('aria-label').split(',')[0], getComputedStyle(a.querySelector('.kxhlu9')).display !== 'none']))"""
+    page.goto("https://www.linkedin.com/feed/")
+    page.wait_for_timeout(800)
+    # Smart count: of the 2 newest fixture notifications (profile views, Sam Lee's comment) only the comment counts.
+    count = "() => document.querySelector('a[aria-label^=\"Notifications,\"] .kxhlu9').textContent"
+    check("smart count shows only wanted new notifications", page.evaluate(count), "1")
+    check("smart count visible, message count kept", page.evaluate(badges), {"Messaging": True, "Notifications": True})
+    check("count stripped from tab title", page.title(), "Feed | LinkedIn")
+    check("pill doesn't count nav badges", state(page)["pill"], None)
 
     page.goto("https://www.linkedin.com/notifications/")
     page.wait_for_timeout(1200)
@@ -113,7 +130,7 @@ with sync_playwright() as p, tempfile.TemporaryDirectory() as profile:
     page.goto("https://www.linkedin.com/notifications/?allnoise=1")
     page.wait_for_timeout(800)
     check("empty state when everything is hidden", page.evaluate("() => document.getElementById('linkedout-empty')?.textContent"),
-          "Nothing here needs you. LinkedOut hid 2 notifications.")
+          "Nothing worth your time. LinkedOut hid 2 notifications.")
     page.goto("https://www.linkedin.com/notifications/")
     page.wait_for_timeout(1200)
     check("no empty state when something is kept", page.evaluate("() => !!document.getElementById('linkedout-empty')"), False)
@@ -138,12 +155,21 @@ with sync_playwright() as p, tempfile.TemporaryDirectory() as profile:
     check("options page loads defaults", opts.is_checked("input[name=notificationMode][value=keep]"), True)
     opts.check("input[name=notificationMode][value=hide]")
     opts.check("#hideInMail")
-    opts.click("#save")
-    opts.wait_for_timeout(300)
+    opts.uncheck("#smartNotificationBadge")
+    opts.uncheck("#hideNotificationBadge")
+    opts.check("#hideMessagingBadge")
+    opts.wait_for_timeout(300)  # settings save on change
     page.wait_for_timeout(500)
     s = state(page)
     check("live settings change hides InMail too", sorted(s["hidden"]), ["Brand Sender", "Recruiter Bo"])
 
+    page.goto("https://www.linkedin.com/notifications/")
+    page.wait_for_timeout(1200)
+    s = state(page)
+    page.goto("https://www.linkedin.com/feed/")
+    page.wait_for_timeout(800)
+    check("badge settings switch which count shows", page.evaluate(badges), {"Messaging": False, "Notifications": True})
+    check("smart count off: LinkedIn's own number is back", page.evaluate(count), "2")
     page.goto("https://www.linkedin.com/notifications/")
     page.wait_for_timeout(1200)
     s = state(page)
@@ -155,6 +181,45 @@ with sync_playwright() as p, tempfile.TemporaryDirectory() as profile:
     opts.reload()
     check("reset restores keep mode", opts.is_checked("input[name=notificationMode][value=keep]"), True)
     check("reset restores InMail off", opts.is_checked("#hideInMail"), False)
+
+    # Phrase checkboxes: defaults start checked; unchecking one, adding and removing your own take effect live.
+    keep_box = 'input[data-phrase="commented on your"]'
+    check("default phrases are checked boxes", opts.is_checked(keep_box), True)
+    check("hide list has checkboxes too", opts.locator("#hideList input[type=checkbox]").count() > 30, True)
+    page.goto("https://www.linkedin.com/notifications/")
+    page.wait_for_timeout(1200)
+    opts.uncheck(keep_box)
+    page.wait_for_timeout(500)
+    check("unchecking a show phrase hides its notifications", "Sam Lee comm" in state(page)["hidden"], True)
+    opts.fill("form[data-list=keep] input", "Brand New  Kind")
+    opts.press("form[data-list=keep] input", "Enter")
+    page.wait_for_timeout(500)
+    check("added phrase keeps its notifications", "Some brand n" in state(page)["hidden"], False)
+    opts.reload()
+    check("added phrase persists, checked", opts.is_checked('input[data-phrase="brand new kind"]'), True)
+    check("unchecked default persists", opts.is_checked(keep_box), False)
+    opts.click('label:has(input[data-phrase="brand new kind"]) .remove')
+    page.wait_for_timeout(500)
+    check("removed phrase is gone", opts.locator('input[data-phrase="brand new kind"]').count(), 0)
+    check("removing it hides again", "Some brand n" in state(page)["hidden"], True)
+
+    # Toolbar popup: quick toggles save live, and the link opens the full settings page.
+    pop = ctx.new_page()
+    pop.set_viewport_size({"width": 300, "height": 420})
+    pop.goto(f"chrome-extension://{ext_id}/popup.html")
+    check("popup shows current settings", [pop.is_checked("#enabled"), pop.is_checked("#hideSponsoredMessages"),
+                                           pop.is_checked("input[name=notificationMode][value=keep]")], [True, True, True])
+    pop.check("#hideInMail")
+    pop.wait_for_timeout(300)
+    opts.reload()
+    check("popup toggle reaches the settings page", opts.is_checked("#hideInMail"), True)
+    if os.environ.get("POPUP_SHOT"):
+        pop.screenshot(path=os.environ["POPUP_SHOT"], full_page=True)
+    opts.close()  # Chrome focuses an already-open settings tab instead of opening one
+    with ctx.expect_page() as full:
+        pop.click("#all")
+    full.value.wait_for_load_state()
+    check("popup link opens the full settings page", full.value.url.endswith("/options.html"), True)
 
     ctx.close()
 

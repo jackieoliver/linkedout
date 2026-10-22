@@ -5,6 +5,7 @@
   const HIDDEN = "linkedout-hidden";
   const REVEAL = "linkedout-reveal";
   const EMPTY_ID = "linkedout-empty";
+  const BADGE_HIDDEN = "linkedout-badge-hidden"; // separate class so the pill doesn't count or reveal badges
   const ROW_LINK = ".msg-conversation-listitem__link, [class*='convo-item-link']";
   const ACTIVE_ROW_LINK = "[class*='convo-item-link--active']";
 
@@ -47,8 +48,87 @@
     return out;
   }
 
+  // Top-nav count badges: LinkedIn's classes are hashed, so find the nav link by its aria-label
+  // ("Notifications, 2 new notifications") and the badge by being a number-only span inside it.
+  function hideBadges() {
+    const wanted = { Notifications: settings.hideNotificationBadge, Messaging: settings.hideMessagingBadge };
+    for (const link of document.querySelectorAll("header a[aria-label], nav a[aria-label]")) {
+      const label = link.getAttribute("aria-label");
+      const name = Object.keys(wanted).find((n) => label.startsWith(n + ","));
+      if (!name) continue;
+      for (const span of link.querySelectorAll("span")) {
+        if (span.children.length || !/^\d+\+?$/.test(span.textContent.trim())) continue;
+        const smart = name === "Notifications" && settings.smartNotificationBadge ? smartCount(label) : null;
+        if (smart === null) {
+          restoreBadge(span);
+          span.classList.toggle(BADGE_HIDDEN, wanted[name]);
+        } else {
+          // Show only the new notifications that pass the rules; nothing when none do.
+          span.dataset.linkedoutOriginal ??= span.textContent;
+          if (span.textContent !== String(smart)) span.textContent = String(smart);
+          span.classList.toggle(BADGE_HIDDEN, smart === 0);
+        }
+      }
+    }
+    // LinkedIn sometimes puts the total in the tab title, e.g. "(3) Feed | LinkedIn".
+    if (settings.hideNotificationBadge && /^\(\d+\+?\)\s/.test(document.title)) {
+      document.title = document.title.replace(/^\(\d+\+?\)\s+/, "");
+    }
+  }
+
+  function restoreBadge(span) {
+    if (span.dataset.linkedoutOriginal === undefined) return;
+    span.textContent = span.dataset.linkedoutOriginal;
+    delete span.dataset.linkedoutOriginal;
+  }
+
+  // Smart count: LinkedIn only says how many notifications are new ("Notifications, 3 new notifications").
+  // Load the Notifications page's HTML in the background (a plain GET, like opening it), take the newest N cards
+  // and count the ones the rules keep. Returns null until known, or when the page can't be read that way.
+  const smart = { n: null, count: null, at: 0, loading: false };
+  const SMART_MAX_AGE = 5 * 60 * 1000;
+
+  function smartCount(label) {
+    const m = label.match(/(\d+)\s+new/);
+    const n = m ? Number(m[1]) : 0;
+    if (n === 0) return null;
+    const fresh = smart.n === n && Date.now() - smart.at < SMART_MAX_AGE;
+    if (!fresh && !smart.loading && !location.pathname.startsWith("/notifications")) loadSmartCount(n);
+    return smart.n === n ? smart.count : null;
+  }
+
+  // Text of an element with spaces between its text nodes (a parsed page has no layout, so no innerText).
+  function spacedText(el) {
+    const parts = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) parts.push(walker.currentNode.nodeValue);
+    return parts.join(" ");
+  }
+
+  async function loadSmartCount(n) {
+    smart.loading = true;
+    try {
+      const res = await fetch("/notifications/", { credentials: "include" });
+      const doc = new DOMParser().parseFromString(await res.text(), "text/html");
+      let cards = [];
+      for (const sel of NOTIFICATION_CARD_SELECTORS) {
+        cards = [...doc.querySelectorAll(sel)].filter((c) => c.textContent.trim());
+        if (cards.length) break;
+      }
+      const newest = cards.slice(0, n);
+      smart.count = newest.length ? newest.filter((c) => linkedoutClassifyNotification(spacedText(c), settings) === "keep").length : null;
+    } catch {
+      smart.count = null;
+    }
+    Object.assign(smart, { n, at: Date.now(), loading: false });
+    // For debugging on the live site: "1 of 3" when counted, "unreadable" when the page had no cards.
+    document.documentElement.dataset.linkedoutSmartCount = smart.count === null ? "unreadable" : `${smart.count} of ${n}`;
+    queueScan();
+  }
+
   function scan() {
     if (!settings.enabled) return;
+    hideBadges();
     const path = location.pathname;
     if (path.startsWith("/notifications")) {
       const cards = findAll(NOTIFICATION_CARD_SELECTORS).filter((c) => c.textContent.trim()); // skip lazy-loading placeholders
@@ -80,7 +160,7 @@
       note.id = EMPTY_ID;
       cards[0].parentElement.before(note);
     }
-    const text = `Nothing here needs you. LinkedOut hid ${cards.length} notifications.`;
+    const text = `Nothing worth your time. LinkedOut hid ${cards.length} notifications.`;
     if (note.textContent !== text) note.textContent = text;
   }
 
@@ -122,6 +202,9 @@
 
   function unhideAll() {
     for (const el of document.querySelectorAll("." + HIDDEN)) el.classList.remove(HIDDEN);
+    for (const el of document.querySelectorAll("." + BADGE_HIDDEN)) el.classList.remove(BADGE_HIDDEN);
+    for (const el of document.querySelectorAll("[data-linkedout-original]")) restoreBadge(el);
+    smart.at = 0; // rules may have changed: recount
   }
 
   let queued = false;
@@ -168,5 +251,8 @@
   // Only childList changes are observed, so toggling classes here doesn't retrigger it.
   const observer = new MutationObserver(queueScan);
   observer.observe(document.body, { childList: true, subtree: true });
+  // The tab title lives in <head>, outside the body observer.
+  const title = document.querySelector("head > title");
+  if (title) observer.observe(title, { childList: true, characterData: true, subtree: true });
   chrome.storage.onChanged.addListener(() => load(true));
 })();
