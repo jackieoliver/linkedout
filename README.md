@@ -12,13 +12,11 @@ Chrome extension that hides LinkedIn sponsored messages and low-value notificati
 - Nothing is clicked, deleted or marked read: hidden items get a CSS class, and the "LinkedOut hid N · show" pill at the bottom left reveals them.
 - The toolbar icon opens quick settings; the full settings page (phrase lists) is linked from there. Settings sync through Chrome.
 
-<p align="center"><img width="190" alt="PINGSLEY watching his 36 pings drop to 0" src="docs/art/spot-badge-zero.png"> <img width="190" alt="PINGSLEY offering a premium opportunity" src="docs/art/spot-premium.png"></p>
+<p align="center"><img width="190" alt="PINGSLEY watching his 36 pings drop to 0" src="docs/art/spot-badge-zero.png"></p>
 
 Built in October 2026 because nothing existing covered both: LinkedZen (closest) has fixed toggles and lists configurable notification blocking as roadmap only; LinkedBlock covers sponsored InMail but not notifications. LinkedIn also removed its own "Sponsored Messages" setting.
 
 ## Install
-
-<img align="right" width="190" alt="PINGSLEY knocking on the Load unpacked door" src="docs/art/spot-load-unpacked.png">
 
 1. `git clone https://github.com/jackieoliver/linkedout.git` (a git clone, so updates can be pulled).
 2. Chrome → `chrome://extensions` → turn on Developer mode, and leave it on (Chrome can switch off unpacked extensions when it is off).
@@ -26,15 +24,11 @@ Built in October 2026 because nothing existing covered both: LinkedZen (closest)
 
 ## Updates
 
-<img align="right" width="180" alt="PINGSLEY updating himself" src="docs/art/spot-update-new.png">
-
 Run `git pull --ff-only` in the folder now and then (by hand, or from a scheduled job such as cron or launchd) to update it. The extension checks every 5 minutes whether the `manifest.json` on disk has a newer version than the copy Chrome is running; if so it reloads itself once, re-injects into open LinkedIn tabs, and LinkedIn shows "LinkedOut updated to X" once. If the reload doesn't take, the toolbar icon shows NEW: click ↻ on `chrome://extensions`.
 
 Releasing: bump `version` in `manifest.json` with every change to the extension files, or nothing reloads. `node --test test/` fails if the extension changed since `origin/main` without a version bump.
 
 ## Test
-
-<img align="right" width="170" alt="PINGSLEY demanding a recount" src="docs/art/spot-test.png">
 
 Icons: `python3 icons/make_icons.py`.
 
