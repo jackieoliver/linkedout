@@ -16,6 +16,23 @@ Chrome extension that hides LinkedIn sponsored messages and low-value notificati
 
 Built in October 2026 because nothing existing covered both: LinkedZen (closest) has fixed toggles and lists configurable notification blocking as roadmap only; LinkedBlock covers sponsored InMail but not notifications. LinkedIn also removed its own "Sponsored Messages" setting.
 
+## How it works
+
+```mermaid
+flowchart LR
+    A["Popup + settings page"] --> B["chrome.storage.sync"]
+    B --> C["content.js scan()"]
+    M["MutationObserver on LinkedIn"] --> C
+    C --> D{"Which page"}
+    D -->|"/notifications"| E["linkedoutClassifyNotification: keep or hide phrases"]
+    D -->|"/messaging"| F["linkedoutHideConversation: Sponsored or InMail tag"]
+    C --> G["Nav badge: fetch /notifications/ and count kept cards"]
+    E --> H["linkedout-hidden class + show pill"]
+    F --> H
+```
+
+Every DOM change on LinkedIn triggers a scan that runs each notification card or conversation row through the pure rules in `rules.js`, then toggles a CSS class instead of removing anything. The smart badge count applies the same notification rules to a background fetch of the Notifications page.
+
 ## Install
 
 1. `git clone https://github.com/jackieoliver/linkedout.git` (a git clone, so updates can be pulled).
